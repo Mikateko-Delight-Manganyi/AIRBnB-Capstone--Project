@@ -1,72 +1,73 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useContext } from "react";
+import { useNavigate, Link } from "react-router-dom";
 import api from "../api/api";
+import { AuthContext } from "../context/AuthProvider";
 
 export default function Login() {
   const nav = useNavigate();
-
-  const [email, setEmail] = useState("user1@test.com");
-  const [password, setPassword] = useState("user123");
-  const [loading, setLoading] = useState(false);
+  const { login } = useContext(AuthContext);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [err, setErr] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const onSubmit = async (e) => {
+  const submit = async (e) => {
     e.preventDefault();
     setErr("");
     setLoading(true);
-
     try {
-      // backend route you used earlier
       const res = await api.post("/users/login", { email, password });
+      const token = res.data?.token;
+      const user = res.data?.user;
 
-      // ✅ IMPORTANT: Save token so reservations can use it
-      localStorage.setItem("token", res.data.token);
-      localStorage.setItem("user", JSON.stringify(res.data.user));
+      if (!token) throw new Error("No token returned");
 
-      nav("/"); // go home after login
+      // use AuthContext to persist token + user
+      if (typeof login === "function") {
+        login({ token, user });
+      } else {
+        localStorage.setItem("token", token);
+        localStorage.setItem("user", JSON.stringify(user));
+      }
+
+      nav("/");
     } catch (e2) {
-      setErr(e2?.response?.data?.message || "Login failed");
+      setErr(e2?.response?.data?.message || e2.message || "Login failed");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div style={{ maxWidth: 420, margin: "30px auto" }}>
-      <h2 style={{ marginTop: 0 }}>Login</h2>
+    <div style={{ maxWidth: 420, margin: "40px auto" }}>
+      <h2>Login</h2>
 
       {err && (
-        <div
-          style={{
-            padding: 10,
-            border: "1px solid #ffb3b3",
-            background: "#ffe7e7",
-            borderRadius: 10,
-            marginBottom: 10,
-          }}
-        >
+        <div style={{ padding: 10, background: "#ffe7e7", border: "1px solid #ffb3b3", borderRadius: 10 }}>
           {err}
         </div>
       )}
 
-      <form onSubmit={onSubmit} style={{ display: "grid", gap: 10 }}>
+      <form onSubmit={submit} style={{ display: "grid", gap: 10 }}>
         <input
           placeholder="Email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
+          autoComplete="email"
         />
-
         <input
           placeholder="Password"
           type="password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
+          autoComplete="current-password"
         />
-
-        <button disabled={loading}>
-          {loading ? "Logging in..." : "Login"}
-        </button>
+        <button disabled={loading}>{loading ? "Logging in..." : "Login"}</button>
       </form>
+
+      <p style={{ marginTop: 10 }}>
+        No account? <Link to="/register">Register</Link>
+      </p>
     </div>
   );
 }
