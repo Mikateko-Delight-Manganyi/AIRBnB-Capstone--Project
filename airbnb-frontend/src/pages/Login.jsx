@@ -30,7 +30,15 @@ export default function Login() {
         localStorage.setItem("user", JSON.stringify(user));
       }
 
-      nav("/");
+      // Role-based redirection
+      if (user?.role === "admin") {
+        console.log("Admin logged in, redirecting to admin dashboard");
+        // If admin frontend is on a different URL, you can use:
+        // window.location.href = import.meta.env.VITE_ADMIN_URL || "/admin/bookings";
+        nav("/admin/bookings");
+      } else {
+        nav("/");
+      }
     } catch (e2) {
       setErr(e2?.response?.data?.message || e2.message || "Login failed");
     } finally {
